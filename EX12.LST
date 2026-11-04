@@ -1,0 +1,26 @@
+     1                                  ; 4 bit multiplication algorithm
+     2                                  [org 0x0100]
+     3 00000000 E90300                      jmp start
+     4 00000003 0D                      multiplicand: db 13 ; 4 bit multiplicand
+     5 00000004 05                      multiplier: db 5 ; 4 bit multiplier
+     6 00000005 00                      result: db 0 ; 8 bit result
+     7                                  
+     8                                  
+     9                                  start:
+    10 00000006 B104                        mov cl, 4 ; initialise bit count to 4
+    11 00000008 8A1E[0300]                  mov bl, [multiplicand]
+    12 0000000C 8A16[0400]                  mov dl, [multiplier]
+    13                                  
+    14                                  checkBit:
+    15 00000010 D0EA                        shr dl, 1 ; shift right most bit in carry flag
+    16 00000012 7304                        jnc skip ; if carry flag = 0, then just skip
+    17                                  
+    18 00000014 001E[0500]                  add [result], bl ; accumulate result
+    19                                  
+    20                                  skip:
+    21 00000018 D0E3                        shl bl, 1 ; shift multiplicand left
+    22 0000001A FEC9                        dec cl ; decrement bit count
+    23 0000001C 75F2                        jnz checkBit ; repeat if bits left
+    24                                  
+    25 0000001E B8004C                      mov ax, 4C00h
+    26 00000021 CD21                        int 0x21

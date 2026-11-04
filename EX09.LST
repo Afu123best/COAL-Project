@@ -1,0 +1,31 @@
+     1                                  ; sorting a list of ten numbers using bubble sort
+     2                                  [org 0x0100]
+     3 00000000 E91500                      jmp start
+     4                                  
+     5 00000003 3C0037002D00320028-     data:   dw 60,55,45,50,40,35,25,30,10,0
+     6 0000000C 00230019001E000A00-
+     7 00000015 0000               
+     8 00000017 00                      swap:   db 0
+     9                                  
+    10 00000018 BB0000                  start:  mov bx, 0 ; initialise array index to zero
+    11 0000001B C606[1700]00                    mov byte [swap], 0 ; reset swap flag to no flags
+    12                                          
+    13 00000020 8B87[0300]              loop1:  mov ax, [data+bx] ; load number in ax
+    14 00000024 3B87[0500]                      cmp ax, [data+bx+2] ; compare with next number
+    15 00000028 7611                            jbe noswap ; no swap if already in order
+    16                                          
+    17 0000002A 8B97[0500]                      mov dx, [data+bx+2] ; load second element in dx
+    18 0000002E 8987[0500]                      mov [data+bx+2], ax ; store first number in second
+    19 00000032 8997[0300]                      mov [data+bx], dx ; store second number in first
+    20 00000036 C606[1700]01                    mov byte [swap], 1 ; flag that a swap has been done
+    21                                  
+    22 0000003B 81C30200                noswap: add bx, 2 ; advance bx to the next index
+    23 0000003F 81FB1200                        cmp bx, 18 ; are we at last index?
+    24 00000043 75DB                            jne loop1 ; if not, compare next two
+    25                                  
+    26 00000045 803E[1700]01                    cmp byte [swap], 1 ; check if a swap has been done
+    27 0000004A 74CC                            je start ; if yes make another pass
+    28                                  
+    29 0000004C B8004C                      mov ax, 4C00h
+    30 0000004F CD21                        int 0x21
+    31                                  
