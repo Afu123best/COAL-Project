@@ -41,7 +41,7 @@ bomb_sprite: ; end game
 
 title_text: db 'AMMO CATCHER', 0
 score: dw 0
-time_left: dw 120
+time_left: dw 5
 time_label: db 'TIME:', 0
 score_label: db 'SCORE:', 0
 
@@ -52,6 +52,10 @@ large_points_text: db '15 POINTS', 0
 avoid_text: db 'AVOID!', 0
 controls_text: db 'USE LEFT AND RIGHT ARROW KEYS', 0
 press_enter_text: db 'PRESS ENTER TO START', 0
+
+last_tick_low: dw 0 ; previous clock tick lower word
+last_tick_high: dw 0 ; previous clock tick upper word
+ticks_to_second: db 18 ; count ticks to next second
 
 ; FUNCTIONS
 
@@ -439,6 +443,107 @@ start_screen_wait:
     jne start_screen_wait
     ret
 
+display_timer:
+    push ax
+    
+    ; color attribute
+    mov ax, 0x0F
+    push ax
+
+    ; number of digits
+    mov ax, 3
+    push ax
+
+    ; column
+    mov ax, 52
+    push ax
+
+    ; row
+    mov ax, 0
+    push ax
+    
+    ; current timer value
+    mov ax, [time_left]
+    push ax
+
+    call draw_number
+
+    pop ax
+    ret
+
+
+initialize_timer:
+
+    push ax
+    push cx
+    push dx
+
+    ; Initialize tick counter
+    mov byte [ticks_to_second], 18
+
+    ; Get initial BIOS clock ticks
+    mov ah, 00h
+    int 1Ah
+
+    mov [last_tick_low], dx
+    mov [last_tick_high], cx
+
+    pop dx
+    pop cx
+    pop ax
+
+    ret
+
+update_timer:
+
+    push ax
+    push bx
+    push cx
+    push dx
+
+    ; Read current BIOS clock ticks
+    mov ah, 00h
+    int 1Ah
+
+    ; Check for a new tick
+    cmp dx, [last_tick_low]
+    jne new_tick
+
+    cmp cx, [last_tick_high]
+    je update_timer_end
+
+
+new_tick:
+
+    ; Save current clock ticks
+    mov [last_tick_low], dx
+    mov [last_tick_high], cx
+
+    ; Don't decrease below zero
+    cmp word [time_left], 0
+    je update_timer_end
+
+    ; Count the tick
+    dec byte [ticks_to_second]
+    jnz update_timer_end
+
+    ; One second has passed
+    dec word [time_left]
+
+    call display_timer
+
+    ; Reset tick counter
+    mov byte [ticks_to_second], 18
+
+
+update_timer_end:
+
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+
+    ret
 
 clear_screen:
     push ax
@@ -593,17 +698,7 @@ start:
     call draw_text
 
     ; time value
-    mov ax, 0x0F
-    push ax
-    mov ax, 3
-    push ax
-    mov ax, 52
-    push ax
-    mov ax, 0
-    push ax
-    mov ax, [time_left]
-    push ax
-    call draw_number
+    call display_timer
 
     ; score label
     mov ax, 0x0F
@@ -629,10 +724,18 @@ start:
     push ax
     call draw_number
 
-    ; wait for a key
-    mov ah, 00h
-    int 16h
+    ; Initialize timer
+    call initialize_timer
 
-    ; exit 
+
+    game_loop:
+
+    call update_timer
+
+    cmp word [time_left], 0
+    jne game_loop
+
+
+    ; Exit temporarily
     mov ax, 4C00h
     int 0x21
