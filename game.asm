@@ -45,8 +45,15 @@ time_left: dw 120
 time_label: db 'TIME:', 0
 score_label: db 'SCORE:', 0
 
-; FUNCTIONS
+start_subtitle: db 'CATCH BULLETS. AVOID BOMBS!', 0
+small_points_text: db '5 POINTS', 0
+medium_points_text: db '10 POINTS', 0
+large_points_text: db '15 POINTS', 0
+avoid_text: db 'AVOID!', 0
+controls_text: db 'USE LEFT AND RIGHT ARROW KEYS', 0
+press_enter_text: db 'PRESS ENTER TO START', 0
 
+; FUNCTIONS
 
 ; draw sprite will take starting row, starting column and address of sprite data
 ; we'll simply change its column variable and call the same procedure.
@@ -289,6 +296,150 @@ draw_number_loop:
     pop bp
     ret 10
 
+start_screen:
+    call clear_screen
+    
+    ; Game title
+    mov ax, 0x0E
+    push ax
+    mov ax, title_text
+    push ax
+    mov ax, 34
+    push ax
+    mov ax, 4
+    push ax
+    call draw_text
+
+    ; Subtitle
+    mov ax, 0x0F
+    push ax
+    mov ax, start_subtitle
+    push ax
+    mov ax, 26
+    push ax
+    mov ax, 7
+    push ax
+    call draw_text
+
+    ; small bullet
+    mov ax, small_bullet_sprite
+    push ax
+    mov ax, 18
+    push ax
+    mov ax, 10
+    push ax
+    call draw_sprite
+
+    ; medium bullet
+    mov ax, medium_bullet_sprite
+    push ax
+    mov ax, 31
+    push ax
+    mov ax, 10
+    push ax
+    call draw_sprite
+
+    ; large bullet
+    mov ax, large_bullet_sprite
+    push ax
+    mov ax, 44
+    push ax
+    mov ax, 10
+    push ax
+    call draw_sprite
+
+    ; bomb
+    mov ax, bomb_sprite
+    push ax
+    mov ax, 60
+    push ax
+    mov ax, 10
+    push ax
+    call draw_sprite
+
+    ; small bullet points
+    mov ax, 0x0F
+    push ax
+    mov ax, small_points_text
+    push ax
+    mov ax, 15
+    push ax
+    mov ax, 14
+    push ax
+    call draw_text
+
+    ; medium bulelt points
+    mov ax, 0x0F
+    push ax
+    mov ax, medium_points_text
+    push ax
+    mov ax, 28
+    push ax
+    mov ax, 14
+    push ax
+    call draw_text
+
+    ; large bullet points
+    mov ax, 0x0F
+    push ax
+    mov ax, large_points_text
+    push ax
+    mov ax, 41
+    push ax
+    mov ax, 14
+    push ax
+    call draw_text
+
+    ; bomb warning
+    mov ax, 0x0C
+    push ax
+    mov ax, avoid_text
+    push ax
+    mov ax, 58
+    push ax
+    mov ax, 14
+    push ax
+    call draw_text
+
+    ; bucket
+    mov ax, bucket_sprite
+    push ax
+    mov ax, 38
+    push ax
+    mov ax, 15
+    push ax
+    call draw_sprite
+
+    ; controls
+    mov ax, 0x0F
+    push ax
+    mov ax, controls_text
+    push ax
+    mov ax, 24
+    push ax
+    mov ax, 20
+    push ax
+    call draw_text
+
+    ; enter prompt
+    mov ax, 0x0E
+    push ax
+    mov ax, press_enter_text
+    push ax
+    mov ax, 30
+    push ax
+    mov ax, 22
+    push ax
+    call draw_text
+
+start_screen_wait:
+    mov ah, 00h
+    int 16h
+    cmp al, 0x0D
+    jne start_screen_wait
+    ret
+
+
 clear_screen:
     push ax
     push cx
@@ -317,6 +468,8 @@ start:
     mov es, ax
 
 
+    call start_screen
+    ; clear screen before displaying gameplay
     call clear_screen
     
     ; top boundary
