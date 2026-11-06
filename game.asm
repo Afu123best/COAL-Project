@@ -41,7 +41,7 @@ bomb_sprite: ; end game
 
 title_text: db 'AMMO CATCHER', 0
 score: dw 0
-time_left: dw 5
+time_left: dw 120
 time_label: db 'TIME:', 0
 score_label: db 'SCORE:', 0
 
@@ -56,6 +56,11 @@ press_enter_text: db 'PRESS ENTER TO START', 0
 last_tick_low: dw 0 ; previous clock tick lower word
 last_tick_high: dw 0 ; previous clock tick upper word
 ticks_to_second: db 18 ; count ticks to next second
+
+game_over_text: db 'GAME OVER', 0
+time_up_text: db "TIME'S UP!", 0
+final_score_text: db 'FINAL SCORE:', 0
+exit_text: db 'PRESS ANY KEY TO EXIT', 0
 
 ; FUNCTIONS
 
@@ -561,6 +566,75 @@ clear_screen:
     pop ax
     ret
 
+
+end_screen:
+
+    call clear_screen
+
+    ; GAME OVER
+    mov ax, 0x0C
+    push ax
+    mov ax, game_over_text
+    push ax
+    mov ax, 35
+    push ax
+    mov ax, 7
+    push ax
+    call draw_text
+
+    ; TIME'S UP
+    mov ax, 0x0F
+    push ax
+    mov ax, time_up_text
+    push ax
+    mov ax, 35
+    push ax
+    mov ax, 9
+    push ax
+    call draw_text
+
+    ; FINAL SCORE label
+    mov ax, 0x0F
+    push ax
+    mov ax, final_score_text
+    push ax
+    mov ax, 31
+    push ax
+    mov ax, 12
+    push ax
+    call draw_text
+
+    ; FINAL SCORE value
+    mov ax, 0x0F
+    push ax
+    mov ax, 5
+    push ax
+    mov ax, 44
+    push ax
+    mov ax, 12
+    push ax
+    mov ax, [score]
+    push ax
+    call draw_number
+
+    ; Exit instruction
+    mov ax, 0x0E
+    push ax
+    mov ax, exit_text
+    push ax
+    mov ax, 29
+    push ax
+    mov ax, 17
+    push ax
+    call draw_text
+
+    ; Wait for a key
+    mov ah, 00h
+    int 16h
+
+    ret
+
+
 ; main
 start:
 
@@ -736,6 +810,8 @@ start:
     jne game_loop
 
 
-    ; Exit temporarily
+    ; display end screen
+    call end_screen
+
     mov ax, 4C00h
     int 0x21
