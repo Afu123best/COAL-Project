@@ -40,6 +40,10 @@ bomb_sprite: ; end game
     dw 0x0C2D, 0x0C2D, 0x0C2D
 
 title_text: db 'AMMO CATCHER', 0
+score: dw 0
+time_left: dw 120
+time_label: db 'TIME:', 0
+score_label: db 'SCORE:', 0
 
 ; FUNCTIONS
 
@@ -130,6 +134,7 @@ draw_text:
     ; column offset
     mov bx, [bp+6]
     shl bx, 1
+    add di, bx
 
     ; text address
     mov si, [bp+8]
@@ -231,7 +236,58 @@ draw_vertical_loop:
     pop bp
     ret 8
 
+draw_number:
+    push bp
+    mov bp, sp
 
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    ; row
+    mov ax, [bp+6]
+    mov bx, 160
+    mul bx
+    mov di, ax
+
+    ; col
+    ; start from the right most digit
+    mov bx, [bp+8]
+    add bx, [bp+10]
+    dec bx
+    shl bx, 1
+    add di, bx
+
+    ; get number and digit count
+    mov ax, [bp+4]
+    mov cx, [bp+10]
+    mov bx, 10
+
+    ; draw digits right -> left
+draw_number_loop:
+    xor dx, dx
+    div bx
+    mov si, ax
+    mov al, dl
+    add al, 30h
+    mov ah, [bp+12]
+    mov [es:di], ax
+    mov ax, si
+    sub di, 2
+    loop draw_number_loop
+
+    pop di 
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+
+    pop bp
+    ret 10
 
 clear_screen:
     push ax
@@ -371,6 +427,54 @@ start:
     mov ax, 0
     push ax
     call draw_text
+
+    ; time label
+    mov ax, 0x0F
+    push ax
+    mov ax, time_label
+    push ax
+    mov ax, 46
+    push ax
+    mov ax, 0
+    push ax
+    call draw_text
+
+    ; time value
+    mov ax, 0x0F
+    push ax
+    mov ax, 3
+    push ax
+    mov ax, 52
+    push ax
+    mov ax, 0
+    push ax
+    mov ax, [time_left]
+    push ax
+    call draw_number
+
+    ; score label
+    mov ax, 0x0F
+    push ax
+    mov ax, score_label
+    push ax
+    mov ax, 63
+    push ax
+    mov ax, 0
+    push ax
+    call draw_text
+
+    ; score value
+    mov ax, 0x0F
+    push ax
+    mov ax, 5
+    push ax
+    mov ax, 70
+    push ax
+    mov ax, 0
+    push ax
+    mov ax, [score]
+    push ax
+    call draw_number
 
     ; wait for a key
     mov ah, 00h
