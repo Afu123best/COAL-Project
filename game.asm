@@ -156,6 +156,83 @@ draw_text_end:
     ret 8
 
 
+draw_horizontal_line:
+    push bp
+    mov bp, sp
+
+    push ax
+    push bx
+    push cx
+    push di
+
+    ; calculate row offset
+    mov ax, [bp+4]
+    mov bx, 160
+    mul bx
+    mov di, ax
+
+    ; col offset
+    mov bx, [bp+6]
+    shl bx, 1
+    add di, bx
+
+    ; character and length
+    mov ax, [bp+10]
+    mov cx, [bp+8]
+
+    cld
+    rep stosw
+
+    pop di
+    pop cx
+    pop bx
+    pop ax
+
+    pop bp
+    ret 8
+
+draw_vertical_line:
+    push bp
+    mov bp, sp
+
+    push ax
+    push bx
+    push cx
+    push di
+
+    ; row offset
+    mov ax, [bp+4]
+    mov bx, 160
+    mul bx
+    mov di, ax
+    
+    ; col
+    mov bx, [bp+6]
+    shl bx, 1
+    add di, bx
+
+    ; character and length
+    mov ax, [bp+10]
+    mov cx, [bp+8]
+
+    cld
+
+draw_vertical_loop:
+    stosw
+    add di, 158
+
+    loop draw_vertical_loop
+
+    pop di
+    pop cx
+    pop bx
+    pop ax
+
+    pop bp
+    ret 8
+
+
+
 clear_screen:
     push ax
     push cx
@@ -186,6 +263,49 @@ start:
 
     call clear_screen
     
+    ; top boundary
+    mov ax, 0x0F2D
+    push ax
+    mov ax, 80
+    push ax
+    mov ax, 0
+    push ax
+    mov ax, 1
+    push ax
+    call draw_horizontal_line
+    
+    ; bottom boundary
+    mov ax, 0x0F2D
+    push ax
+    mov ax, 80
+    push ax
+    mov ax, 0
+    push ax
+    mov ax, 24
+    push ax
+    call draw_horizontal_line
+
+    ; left boundary
+    mov ax, 0x0F7C
+    push ax
+    mov ax, 22
+    push ax
+    mov ax, 0
+    push ax
+    mov ax, 2
+    push ax
+    call draw_vertical_line
+
+    ; right boundary
+    mov ax, 0x0F7C
+    push ax
+    mov ax, 22
+    push ax
+    mov ax, 79
+    push ax
+    mov ax, 2
+    push ax
+    call draw_vertical_line
 
     ; Draw bucket
 
