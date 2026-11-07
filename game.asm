@@ -184,6 +184,7 @@ draw_horizontal_line:
     push ax
     push bx
     push cx
+    push dx
     push di
 
     ; calculate row offset
@@ -205,6 +206,7 @@ draw_horizontal_line:
     rep stosw
 
     pop di
+    pop dx
     pop cx
     pop bx
     pop ax
@@ -219,6 +221,7 @@ draw_vertical_line:
     push ax
     push bx
     push cx
+    push dx
     push di
 
     ; row offset
@@ -245,6 +248,7 @@ draw_vertical_loop:
     loop draw_vertical_loop
 
     pop di
+    pop dx
     pop cx
     pop bx
     pop ax
