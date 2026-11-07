@@ -634,6 +634,34 @@ end_screen:
 
     ret
 
+display_score:
+    push ax
+
+    ; color attribute
+    mov ax, 0x0F
+    push ax
+
+    ; number of digits
+    mov ax, 5
+    push ax
+
+    ; col
+    mov ax, 70
+    push ax
+
+    ; row
+    mov ax, 0
+    push ax
+
+    ; current score
+    mov ax, [score]
+    push ax
+
+    call draw_number
+
+    pop ax
+    ret
+
 
 ; main
 start:
@@ -786,17 +814,7 @@ start:
     call draw_text
 
     ; score value
-    mov ax, 0x0F
-    push ax
-    mov ax, 5
-    push ax
-    mov ax, 70
-    push ax
-    mov ax, 0
-    push ax
-    mov ax, [score]
-    push ax
-    call draw_number
+    call display_score
 
     ; Initialize timer
     call initialize_timer
