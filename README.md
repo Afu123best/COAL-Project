@@ -129,15 +129,15 @@ Example layout (replace with your own design):
 ### Phase I: Interface & Objects
 **Deadline:** 11:59 pm, Sunday 8 November 2026
 
-- [ ] Collector/player object displayed
-- [ ] Score-giving objects displayed (all 3 types)
-- [ ] Game-ending object(s) displayed
-- [ ] 3×3 representation for all objects
-- [ ] Timer displayed
-- [ ] Live score displayed
-- [ ] Start screen (name, instructions, *Press Enter to Start*)
-- [ ] End screen (game-over message, final score)
-
+- [x] Collector/player object displayed
+- [x] Score-giving objects displayed (all 3 types)
+- [x] Game-ending object(s) displayed
+- [x] 3×3 representation for all objects
+- [x] Timer displayed
+- [x] Live score displayed
+- [x] Start screen (name, instructions, *Press Enter to Start*)
+- [x] End screen (game-over message, final score)
+- [ ] Complete Phase I Integration Testing
 ### Phase II: Complete Gameplay
 **Deadline:** 11:59 pm, Sunday 29 November 2026
 
