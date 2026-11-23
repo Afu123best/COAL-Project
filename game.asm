@@ -1,6 +1,10 @@
 [org 0x0100]
 jmp start
 
+; function convention = 
+; function_name:
+; labels inside the function = function_name_label_name
+; for less confusiong when using jumps lol
 ; game title will be at Row 0, Column 2
 ; timer Row 0, Column 48
 ; Score	Row 0, Column 64
@@ -18,6 +22,11 @@ bucket_sprite: ; player
     dw 0x0720, 0x0720, 0x0720 ; first row
     dw 0x077C, 0x0720, 0x077C ; second row
     dw 0x075C, 0x075F, 0x072F ; third row
+
+empty_sprite:
+    dw 0x0720, 0x0720, 0x0720
+    dw 0x0720, 0x0720, 0x0720
+    dw 0x0720, 0x0720, 0x0720
 
 small_bullet_sprite: ; 5 points
     dw 0x0720, 0x0E7C, 0x0720
@@ -44,6 +53,8 @@ score: dw 0
 time_left: dw 120
 time_label: db 'TIME:', 0
 score_label: db 'SCORE:', 0
+
+bucket_col: dw 38
 
 start_subtitle: db 'CATCH BULLETS. AVOID BOMBS!', 0
 small_points_text: db '5 POINTS', 0
@@ -102,11 +113,11 @@ draw_sprite:
     cld
     mov dx, 3
 
-draw_sprite_row:
+    draw_sprite_row:
 
     mov cx, 3
 
-draw_sprite_col:
+    draw_sprite_col:
 
     lodsw
     stosw
@@ -158,14 +169,14 @@ draw_text:
     mov ah, [bp+10]
     
     cld
-draw_text_loop:
+    draw_text_loop:
     lodsb
     cmp al, 0
     je draw_text_end
     stosw
     jmp draw_text_loop
 
-draw_text_end:
+    draw_text_end:
 
     pop di
     pop si
@@ -177,7 +188,7 @@ draw_text_end:
     ret 8
 
 
-draw_horizontal_line:
+    draw_horizontal_line:
     push bp
     mov bp, sp
 
@@ -241,7 +252,7 @@ draw_vertical_line:
 
     cld
 
-draw_vertical_loop:
+    draw_vertical_loop:
     stosw
     add di, 158
 
@@ -287,7 +298,7 @@ draw_number:
     mov bx, 10
 
     ; draw digits right -> left
-draw_number_loop:
+    draw_number_loop:
     xor dx, dx
     div bx
     mov si, ax
@@ -308,6 +319,100 @@ draw_number_loop:
 
     pop bp
     ret 10
+
+
+draw_bucket:
+    push ax
+
+    mov ax, bucket_sprite
+    push ax
+
+    mov ax, [bucket_col]
+    push ax
+
+    mov ax, 21
+    push ax
+    
+    call draw_sprite
+
+    pop ax
+
+    ret
+
+
+erase_bucket:
+    push ax
+
+    mov ax, empty_sprite
+    push ax
+
+    mov ax, [bucket_col]
+    push ax
+
+    mov ax, 21
+    push ax
+
+    call draw_sprite
+
+    pop ax
+
+    ret
+
+move_bucket:
+    push ax
+
+    ; check whether a key is available
+    mov ah, 01h
+    int 16h
+
+    jz move_bucket_done
+
+    ; read the available key
+    mov ah, 00h
+    int 16h
+
+    ; check for left arrow (<-)
+    cmp ah, 4Bh 
+    je move_bucket_left
+    
+    ; check for right arrow (->)
+    cmp ah, 4Dh
+    je move_bucket_right
+
+    jmp move_bucket_done
+
+    move_bucket_left:
+
+    ; first check left boundary
+    cmp word [bucket_col], 1 
+    jbe move_bucket_done
+
+    call erase_bucket
+    
+    dec word [bucket_col]
+    
+    call draw_bucket
+
+    jmp move_bucket_done
+
+    move_bucket_right:
+    
+    ; check right boundary
+    cmp word [bucket_col], 76
+    jae move_bucket_done
+
+    call erase_bucket
+
+    inc word [bucket_col]
+
+    call draw_bucket
+
+    move_bucket_done:
+
+    pop ax
+
+    ret
+
 
 start_screen:
     call clear_screen
@@ -445,7 +550,7 @@ start_screen:
     push ax
     call draw_text
 
-start_screen_wait:
+    start_screen_wait:
     mov ah, 00h
     int 16h
     cmp al, 0x0D
@@ -522,7 +627,7 @@ update_timer:
     je update_timer_end
 
 
-new_tick:
+    new_tick:
 
     ; Save current clock ticks
     mov [last_tick_low], dx
@@ -729,13 +834,7 @@ start:
 
     ; Draw bucket
 
-    mov ax, bucket_sprite   
-    push ax
-    mov ax, 38
-    push ax
-    mov ax, 21
-    push ax
-    call draw_sprite
+    call draw_bucket
 
 
     ; Draw small bullet
@@ -827,6 +926,8 @@ start:
     game_loop:
 
     call update_timer
+
+    call move_bucket
 
     cmp word [time_left], 0
     jne game_loop
