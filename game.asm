@@ -64,14 +64,34 @@ avoid_text: db 'AVOID!', 0
 controls_text: db 'USE LEFT AND RIGHT ARROW KEYS', 0
 press_enter_text: db 'PRESS ENTER TO START', 0
 
+; timer ticks
 last_tick_low: dw 0 ; previous clock tick lower word
 last_tick_high: dw 0 ; previous clock tick upper word
 ticks_to_second: db 18 ; count ticks to next second
+
+; object falling ticks
+last_fall_tick_low: dw 0
+last_fall_tick_high: dw 0
+ticks_to_fall: db 4 ; 18.2 ticks per second so 18.2/4 = 0.22. 
+; if we wanna icnrease difficulty than we decrease this number
 
 game_over_text: db 'GAME OVER', 0
 time_up_text: db "TIME'S UP!", 0
 final_score_text: db 'FINAL SCORE:', 0
 exit_text: db 'PRESS ANY KEY TO EXIT', 0
+
+; Falling objects positions
+small_row: dw 4
+small_col: dw 12
+
+medium_row: dw 8
+medium_col: dw 32
+
+large_row: dw 4
+large_col: dw 52
+
+bomb_row: dw 12
+bomb_col: dw 65
 
 ; FUNCTIONS
 
@@ -414,6 +434,187 @@ move_bucket:
     ret
 
 
+draw_falling_objects:
+    push ax
+
+    ; draw small bullet
+    mov ax, small_bullet_sprite
+    push ax
+    mov ax, [small_col]
+    push ax
+    mov ax, [small_row]
+    push ax
+    call draw_sprite
+
+    ; draw medium bullet
+    mov ax, medium_bullet_sprite
+    push ax
+    mov ax, [medium_col]
+    push ax
+    mov ax, [medium_row]
+    push ax
+    call draw_sprite
+
+    ; draw large bullet
+    mov ax, large_bullet_sprite
+    push ax
+    mov ax, [large_col]
+    push ax
+    mov ax, [large_row]
+    push ax
+    call draw_sprite
+
+    ; draw bomb
+    mov ax, bomb_sprite
+    push ax
+    mov ax, [bomb_col]
+    push ax
+    mov ax, [bomb_row]
+    push ax
+    call draw_sprite
+
+    pop ax
+
+    ret
+
+
+erase_falling_objects:
+    push ax
+
+    ; erase small bullet
+    mov ax, empty_sprite
+    push ax
+    mov ax, [small_col]
+    push ax
+    mov ax, [small_row]
+    push ax
+    call draw_sprite
+
+    ; erase medim bullet
+    mov ax, empty_sprite
+    push ax
+    mov ax, [medium_col]
+    push ax
+    mov ax, [medium_row]
+    push ax
+    call draw_sprite
+
+    ; erase large bulelt
+    mov ax, empty_sprite
+    push ax
+    mov ax, [large_col]
+    push ax
+    mov ax, [large_row]
+    push ax
+    call draw_sprite
+    
+    ; erase bomb
+    mov ax, empty_sprite
+    push ax
+    mov ax, [bomb_col]
+    push ax
+    mov ax, [bomb_row]
+    push ax
+    call draw_sprite
+
+    pop ax
+
+    ret
+
+
+update_falling_objects:
+    
+    push ax
+    push cx
+    push dx
+
+    ; read current BIOS clock ticks
+    mov ah, 00h
+    int 1Ah
+
+    ; check whether a new tick has occurred
+    cmp dx, [last_fall_tick_low]
+    jne update_falling_objects_new_tick
+
+    cmp cx, [last_fall_tick_high]
+    je update_falling_objects_done
+
+    update_falling_objects_new_tick:
+    
+    ; save current tick values
+    mov [last_fall_tick_low], dx
+    mov [last_fall_tick_high], cx
+
+    ; count ticks until next movement
+    dec byte [ticks_to_fall]
+    jnz update_falling_objects_done
+
+    ; rest falling speed counter
+    mov byte [ticks_to_fall], 4
+
+    ; erase objects at their old positions
+    call erase_falling_objects
+
+    ; move small bullet
+    cmp word [small_row], 18
+    jae update_small_reset
+
+    inc word [small_row]
+    jmp update_medium
+
+    update_small_reset:
+    mov word [small_row], 4
+
+    
+    ; move medium bullet
+    update_medium:
+    cmp word[medium_row], 18
+    jae update_medium_reset
+
+    inc word[medium_row]
+    jmp update_large
+
+    update_medium_reset:
+    mov word [medium_row], 8
+
+    
+    ; move large bullet
+    update_large:
+    cmp word [large_row], 18
+    jae update_large_reset
+
+    inc word [large_row]
+    jmp update_bomb
+
+    update_large_reset:
+    mov word [large_row], 4
+
+
+    ; move bomb
+    update_bomb:
+    cmp word [bomb_row], 18
+    jae update_bomb_reset
+
+    inc word [bomb_row]
+    jmp update_draw_objects
+
+    update_bomb_reset:
+    mov word [bomb_row], 12
+
+
+    update_draw_objects:
+    ; draw objects at their new positions
+    call draw_falling_objects
+
+    update_falling_objects_done:
+
+    pop dx
+    pop cx
+    pop ax
+
+    ret
+
+
 start_screen:
     call clear_screen
     
@@ -595,12 +796,19 @@ initialize_timer:
     ; Initialize tick counter
     mov byte [ticks_to_second], 18
 
+    ; Initialize falling speed counter
+    mov byte [ticks_to_fall], 4
+
     ; Get initial BIOS clock ticks
     mov ah, 00h
     int 1Ah
 
     mov [last_tick_low], dx
     mov [last_tick_high], cx
+
+    ; initialise falling object clock
+    mov [last_fall_tick_low], dx
+    mov [last_fall_tick_high], cx
 
     pop dx
     pop cx
@@ -836,49 +1044,9 @@ start:
 
     call draw_bucket
 
+    ; Draw all falling objects
 
-    ; Draw small bullet
-
-    mov ax, small_bullet_sprite
-    push ax
-    mov ax, 12
-    push ax
-    mov ax, 4
-    push ax
-    call draw_sprite
-
-
-    ; Draw medium bullet
-
-    mov ax, medium_bullet_sprite
-    push ax
-    mov ax, 32
-    push ax
-    mov ax, 8
-    push ax
-    call draw_sprite
-
-
-    ; Draw large bullet
-
-    mov ax, large_bullet_sprite
-    push ax
-    mov ax, 52
-    push ax
-    mov ax, 4
-    push ax
-    call draw_sprite
-
-
-    ; Draw bomb
-
-    mov ax, bomb_sprite
-    push ax
-    mov ax, 65
-    push ax
-    mov ax, 12
-    push ax
-    call draw_sprite
+    call draw_falling_objects
 
     ; draw game title
     mov ax, 0x07
@@ -924,14 +1092,14 @@ start:
 
 
     game_loop:
-
     call update_timer
+
+    call update_falling_objects
 
     call move_bucket
 
     cmp word [time_left], 0
     jne game_loop
-
 
     ; display end screen
     call end_screen
