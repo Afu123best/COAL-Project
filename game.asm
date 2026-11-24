@@ -51,6 +51,7 @@ bomb_sprite: ; end game
 title_text: db 'AMMO CATCHER', 0
 score: dw 0
 time_left: dw 120
+game_end_reason: db 0 ; 0 = timer expired, 1 = bomb caught
 time_label: db 'TIME:', 0
 score_label: db 'SCORE:', 0
 
@@ -63,6 +64,7 @@ large_points_text: db '15 POINTS', 0
 avoid_text: db 'AVOID!', 0
 controls_text: db 'USE LEFT AND RIGHT ARROW KEYS', 0
 press_enter_text: db 'PRESS ENTER TO START', 0
+bomb_caught_text: db 'BOMB CAUGHT!', 0
 
 ; timer ticks
 last_tick_low: dw 0 ; previous clock tick lower word
@@ -72,7 +74,7 @@ ticks_to_second: db 18 ; count ticks to next second
 ; object falling ticks
 last_fall_tick_low: dw 0
 last_fall_tick_high: dw 0
-ticks_to_fall: db 4 ; 18.2 ticks per second so 18.2/4 = 0.22. 
+ticks_to_fall: db 4 ; 4/18.2 = approximately 0.22 seconds
 ; if we wanna icnrease difficulty than we decrease this number
 
 game_over_text: db 'GAME OVER', 0
@@ -490,7 +492,7 @@ erase_falling_objects:
     push ax
     call draw_sprite
 
-    ; erase medim bullet
+    ; erase medium bullet
     mov ax, empty_sprite
     push ax
     mov ax, [medium_col]
@@ -556,7 +558,7 @@ update_falling_objects:
     call erase_falling_objects
 
     ; move small bullet
-    cmp word [small_row], 18
+    cmp word [small_row], 21
     jae update_small_reset
 
     inc word [small_row]
@@ -568,7 +570,7 @@ update_falling_objects:
     
     ; move medium bullet
     update_medium:
-    cmp word[medium_row], 18
+    cmp word [medium_row], 21
     jae update_medium_reset
 
     inc word[medium_row]
@@ -580,7 +582,7 @@ update_falling_objects:
     
     ; move large bullet
     update_large:
-    cmp word [large_row], 18
+    cmp word [large_row], 21
     jae update_large_reset
 
     inc word [large_row]
@@ -592,7 +594,7 @@ update_falling_objects:
 
     ; move bomb
     update_bomb:
-    cmp word [bomb_row], 18
+    cmp word [bomb_row], 21
     jae update_bomb_reset
 
     inc word [bomb_row]
@@ -610,6 +612,209 @@ update_falling_objects:
 
     pop dx
     pop cx
+    pop ax
+
+    ret
+
+
+; parameters
+;[bp+4] = object row
+;[bp+6] = object column
+; returns:
+; CF = 1 if collision is detected
+; CF = 0 if collision is not detected
+; collision detection : ObjectLeft <= BucketRight and ObjectRight >= BucketLeft
+check_collision:
+    push bp
+    mov bp, sp
+
+    push ax
+
+    ; check vertical overlap
+    ; calculate object's bottom row
+    mov ax, [bp+4]
+    add ax, 2
+
+    ; compare with bucket's top row (21)
+    cmp ax, 21
+    jb check_collision_no
+
+    ; compare object's top row with bucket's bottom row (23)
+    mov ax, [bp+4]
+    cmp ax, 23
+    ja check_collision_no
+
+    ; check horizontal overlap
+    ; calculate object's right column
+    mov ax, [bp+6]
+    add ax, 2
+
+    ; compare with bucket's left column
+
+    cmp ax, [bucket_col]
+    jb check_collision_no
+
+    ; calculate bucket's right column
+
+    mov ax, [bucket_col]
+    add ax, 2
+
+    ; compare with object's left column
+    cmp ax, [bp+6]
+    jb check_collision_no
+
+    ; both vertical and horizontal overlap
+    stc
+    jmp check_collision_done
+
+
+    check_collision_no:
+    clc
+
+
+    check_collision_done:
+
+    pop ax
+    pop bp
+    ret 4
+
+
+check_all_collisions:
+    push ax
+
+    ; check small bullet
+    mov ax, [small_col]
+    push ax
+    mov ax, [small_row]
+    push ax
+    call check_collision
+    ; basically jc small_collision_detected but due to the short jump being out of range we just write this
+    jnc short check_small_no_collision
+    jmp near small_collision_detected
+
+    check_small_no_collision:
+
+    ; check medium bullet
+    mov ax, [medium_col]
+    push ax
+    mov ax, [medium_row]
+    push ax
+    call check_collision
+    jnc short check_medium_no_collision_first
+    jmp near medium_collision_detected
+
+    check_medium_no_collision_first:
+
+    ; check large bullet
+    mov ax, [large_col]
+    push ax
+    mov ax, [large_row]
+    push ax
+    call check_collision
+    jnc short check_large_no_collision_first
+    jmp near large_collision_detected
+
+    check_large_no_collision_first:
+
+    ; check bomb
+    mov ax, [bomb_col]
+    push ax
+    mov ax, [bomb_row]
+    push ax
+    call check_collision
+    jnc short check_bomb_no_collision_first
+    jmp near bomb_collision_detected
+
+    check_bomb_no_collision_first:
+
+    jmp check_all_collisions_done
+
+    ; collision handlers (temporary reset)
+
+    small_collision_detected:
+    call erase_falling_objects
+    ; add 5 points
+    add word [score], 5
+    ; update live score display
+    call display_score
+    ; reset small bullet
+    mov word [small_row], 4
+    call draw_falling_objects
+    call draw_bucket
+
+    jmp check_medium_collision
+
+    check_medium_collision:
+    mov ax, [medium_col]
+    push ax
+    mov ax, [medium_row]
+    push ax
+    call check_collision
+    jnc short check_medium_no_collision_second
+    jmp near medium_collision_detected
+
+    check_medium_no_collision_second:
+
+    jmp check_large_collision
+
+    medium_collision_detected:
+    call erase_falling_objects
+    ; add 10 points
+    add word [score], 10
+    ; update live score display
+    call display_score
+    ; reset medium bullet
+    mov word [medium_row], 8
+    call draw_falling_objects
+    call draw_bucket
+
+    jmp check_large_collision
+
+    check_large_collision:
+    mov ax, [large_col]
+    push ax
+    mov ax, [large_row]
+    push ax
+    call check_collision
+    jnc short check_large_no_collision_second
+    jmp near large_collision_detected
+
+    check_large_no_collision_second:
+
+    jmp check_bomb_collision
+
+    large_collision_detected:
+    call erase_falling_objects
+    ; add 15 points
+    add word [score], 15
+    ; update live score display
+    call display_score
+    ; reset large bullet
+    mov word [large_row], 4
+    call draw_falling_objects
+    call draw_bucket
+
+    jmp check_bomb_collision
+
+    check_bomb_collision:
+    mov ax, [bomb_col]
+    push ax
+    mov ax, [bomb_row]
+    push ax
+    call check_collision
+    jnc short check_bomb_no_collision_second
+    jmp near bomb_collision_detected
+
+    check_bomb_no_collision_second:
+
+    jmp check_all_collisions_done
+
+    bomb_collision_detected:
+    ; Set game-ending reason to bomb collision
+    mov byte [game_end_reason], 1
+
+    jmp check_all_collisions_done
+    check_all_collisions_done:
     pop ax
 
     ret
@@ -899,6 +1104,11 @@ end_screen:
     push ax
     call draw_text
 
+    ; Check why the game ended
+    cmp byte [game_end_reason], 1
+    je short end_screen_bomb
+
+
     ; TIME'S UP
     mov ax, 0x0F
     push ax
@@ -909,6 +1119,25 @@ end_screen:
     mov ax, 9
     push ax
     call draw_text
+
+    jmp end_screen_reason_done
+
+
+    end_screen_bomb:
+
+    ; BOMB CAUGHT
+    mov ax, 0x0C
+    push ax
+    mov ax, bomb_caught_text
+    push ax
+    mov ax, 34
+    push ax
+    mov ax, 9
+    push ax
+    call draw_text
+
+
+    end_screen_reason_done:
 
     ; FINAL SCORE label
     mov ax, 0x0F
@@ -1091,15 +1320,29 @@ start:
     call initialize_timer
 
 
-    game_loop:
+game_loop:
+
     call update_timer
 
     call update_falling_objects
 
     call move_bucket
 
+    call check_all_collisions
+
+    ; Check whether bomb was caught
+    cmp byte [game_end_reason], 1
+    je game_end
+
+    ; Check whether timer expired
     cmp word [time_left], 0
     jne game_loop
+
+
+game_end:
+
+    ; Display end screen
+    call end_screen
 
     ; display end screen
     call end_screen
